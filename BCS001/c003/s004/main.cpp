@@ -24,12 +24,11 @@ void draw_triangle(lcg::PPM &ppm, lcg::Vec2 A, lcg::Vec2 B, lcg::Vec2 C)
     lcg::Vec2 AB = B - A;
     lcg::Vec2 BC = C - B;
     lcg::Vec2 CA = A - C;
-
     for (int y = (int)box.min.y; y <= (int)box.max.y; ++y)
     {
         for (int x = (int)box.min.x; x <= (int)box.max.x; ++x)
         {
-            lcg::Vec2 P((float)x + 0.5f, (float)y + 0.5f);
+            lcg::Vec2 P(x + 0.5f, y + 0.5f);
 
             lcg::Vec2 AP = P - A;
             lcg::Vec2 BP = P - B;
@@ -42,11 +41,12 @@ void draw_triangle(lcg::PPM &ppm, lcg::Vec2 A, lcg::Vec2 B, lcg::Vec2 C)
             if ((cross1 >= 0 && cross2 >= 0 && cross3 >= 0) ||
                 (cross1 <= 0 && cross2 <= 0 && cross3 <= 0))
             {
-                ppm.setPixel(x, y, 255, 255, 255);
+                ppm.setPixel(x, y, lcg::Color(255, 255, 255));
             }
         }
     }
 }
+
 int main()
 {
     lcg::Vec2 A{100, 100};
