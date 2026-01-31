@@ -12,21 +12,27 @@
 - 采样：判断子像素是否在三角形内
 - 混合：如果一个像素里的 n 个子像素只有 s 个在三角形内，那这个原始像素的颜色就是原始颜色的s/n
 
-思想非常的简单。所以我们可以对上届课的代码上更改。
+思想非常的简单。所以我们可以对上届课的代码上更改。为了符合作业要求，这里先将像素数据写入 `std::vector<uint_t>` 缓冲区，再一次性写入 PPM 文件。
 
 据此我们可以实现如下代码
 
 ```c++
-void draw_triangle_with_ssaa(lcg::PPM &ppm, lcg::Vec2 A, lcg::Vec2 B, lcg::Vec2 C, const int ssaa_factor = 4)
+
+void draw_triangle_with_ssaa(std::vector<uint8_t> &buffer, uint32_t width, uint32_t height,
+                             lcg::Vec2 A, lcg::Vec2 B, lcg::Vec2 C, const int ssaa_factor = 4)
 {
     AABB box = computeAABB(A, B, C);
 
     lcg::Vec2 AB = B - A;
     lcg::Vec2 BC = C - B;
     lcg::Vec2 CA = A - C;
-    for (int y = (int)box.min.y; y <= (int)box.max.y; ++y)
+    const int min_x = std::max(0, static_cast<int>(std::floor(box.min.x)));
+    const int min_y = std::max(0, static_cast<int>(std::floor(box.min.y)));
+    const int max_x = std::min(static_cast<int>(width) - 1, static_cast<int>(std::ceil(box.max.x)));
+    const int max_y = std::min(static_cast<int>(height) - 1, static_cast<int>(std::ceil(box.max.y)));
+    for (int y = min_y; y <= max_y; ++y)
     {
-        for (int x = (int)box.min.x; x <= (int)box.max.x; ++x)
+        for (int x = min_x; x <= max_x; ++x)
         {
             int inside_count = 0;
             for (int i = 0; i < ssaa_factor; i++)
@@ -56,13 +62,15 @@ void draw_triangle_with_ssaa(lcg::PPM &ppm, lcg::Vec2 A, lcg::Vec2 B, lcg::Vec2 
             {
                 float coverage = (float)inside_count / (ssaa_factor * ssaa_factor);
 
-                uint8_t color = (uint8_t)(255.0f * coverage);
-                ppm.setPixel(x, y, color, color, color);
+                uint_t color = static_cast<uint8_t>(255.0f * coverage);
+                setBufferPixel(buffer, width, height, x, y, color, color, color);
             }
         }
     }
 }
 ```
+
+主函数中先创建缓冲区，绘制完成后调用 `ppm.setData(buffer)` 写入文件。
 
 开启SSAA（右边）与原始（左边）渲染对比
 

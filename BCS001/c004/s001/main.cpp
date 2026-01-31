@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include <vector>
 #include "ppm.h"
 #include "Vec2.h"
 struct AABB
@@ -17,7 +18,22 @@ AABB computeAABB(const lcg::Vec2 &A, const lcg::Vec2 &B, const lcg::Vec2 &C)
     box.max.y = std::max({A.y, B.y, C.y});
     return box;
 }
-void draw_triangle_with_ssaa(lcg::PPM &ppm, lcg::Vec2 A, lcg::Vec2 B, lcg::Vec2 C, const int ssaa_factor = 4)
+void setPixel(std::vector<uint8_t> &buffer, uint32_t width, uint32_t height,
+              uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b)
+{
+    if (x >= width || y >= height)
+    {
+        return;
+    }
+
+    const size_t index = (static_cast<size_t>(y) * width + x) * 3;
+    buffer[index + 0] = r;
+    buffer[index + 1] = g;
+    buffer[index + 2] = b;
+}
+
+void draw_triangle(std::vector<uint8_t> &buffer, uint32_t width, uint32_t height,
+                   lcg::Vec2 A, lcg::Vec2 B, lcg::Vec2 C)
 {
     AABB box = computeAABB(A, B, C);
 
@@ -28,40 +44,26 @@ void draw_triangle_with_ssaa(lcg::PPM &ppm, lcg::Vec2 A, lcg::Vec2 B, lcg::Vec2 
     {
         for (int x = (int)box.min.x; x <= (int)box.max.x; ++x)
         {
-            int inside_count = 0;
-            for (int i = 0; i < ssaa_factor; i++)
+            lcg::Vec2 P(x + 0.5f, y + 0.5f);
+
+            lcg::Vec2 AP = P - A;
+            lcg::Vec2 BP = P - B;
+            lcg::Vec2 CP = P - C;
+
+            float cross1 = AB.cross(AP);
+            float cross2 = BC.cross(BP);
+            float cross3 = CA.cross(CP);
+
+            if ((cross1 >= 0 && cross2 >= 0 && cross3 >= 0) ||
+                (cross1 <= 0 && cross2 <= 0 && cross3 <= 0))
             {
-                for (int j = 0; j < ssaa_factor; j++)
-                {
-                    float sx = (float)x + (i + 0.5f) / ssaa_factor;
-                    float sy = (float)y + (j + 0.5f) / ssaa_factor;
-                    lcg::Vec2 P(sx, sy);
-
-                    lcg::Vec2 AP = P - A;
-                    lcg::Vec2 BP = P - B;
-                    lcg::Vec2 CP = P - C;
-
-                    float cross1 = AB.cross(AP);
-                    float cross2 = BC.cross(BP);
-                    float cross3 = CA.cross(CP);
-
-                    if ((cross1 >= 0 && cross2 >= 0 && cross3 >= 0) ||
-                        (cross1 <= 0 && cross2 <= 0 && cross3 <= 0))
-                    {
-                        inside_count++;
-                    }
-                }
-            }
-            if (inside_count > 0)
-            {
-                float coverage = (float)inside_count / (ssaa_factor * ssaa_factor);
-
-                uint8_t color = (uint8_t)(255.0f * coverage);
-                ppm.setPixel(x, y, color, color, color);
+                setPixel(buffer, width, height, static_cast<uint32_t>(x),
+                         static_cast<uint32_t>(y), 255, 255, 255);
             }
         }
     }
 }
+
 int main()
 {
     lcg::Vec2 A{100, 100};
@@ -69,8 +71,12 @@ int main()
     lcg::Vec2 C{300, 100};
     uint32_t width = 400;
     uint32_t height = 400;
+    std::vector<uint8_t> colorBuffer(static_cast<size_t>(width) * height * 3, 0);
+
+    draw_triangle(colorBuffer, width, height, A, B, C);
+
     lcg::PPM ppm(".", "triangle", width, height);
-    draw_triangle_with_ssaa(ppm, A, B, C, 16);
+    ppm.setData(colorBuffer);
     std::cout << "创建 triangle.ppm 成功" << std::endl;
     return 0;
 }
